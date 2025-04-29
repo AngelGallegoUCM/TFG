@@ -1,3 +1,37 @@
+<?php
+// Iniciar sesión y verificar autenticación
+require_once("php/verificar_sesion.php");
+verificarSesion();
+
+// Verificar si el usuario tiene permisos (admin o editor)
+verificarRol(['admin', 'editor']);
+
+// Conexión a la base de datos
+include("php/conexion.php");
+
+// Obtener el ID del aula desde la URL y validarlo
+if (isset($_GET['id']) && !empty($_GET['id']) && is_numeric($_GET['id'])) {
+    $aula_id = intval($_GET['id']);
+
+    try {
+        // Consulta preparada para obtener los datos del aula
+        $stmt = $conn->prepare("SELECT * FROM aulas WHERE id = ?");
+        $stmt->bind_param("i", $aula_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $aula = $result->fetch_assoc();
+        } else {
+            die("Aula no encontrada.");
+        }
+    } catch (Exception $e) {
+        die("Error al obtener datos del aula: " . htmlspecialchars($e->getMessage()));
+    }
+} else {
+    die("ID del aula no especificado o inválido.");
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -9,28 +43,6 @@
 <body>
     <?php include("php/sidebar.php"); ?> <!-- Incluir el sidebar -->
 
-    <?php
-    // Conexión a la base de datos
-    include("php/conexion.php");
-
-    // Obtener el ID del aula desde la URL
-    if (isset($_GET['id']) && !empty($_GET['id'])) {
-        $aula_id = intval($_GET['id']);
-
-        // Consulta para obtener los datos del aula
-        $query = "SELECT * FROM aulas WHERE id = $aula_id";
-        $result = $conn->query($query);
-
-        if ($result->num_rows > 0) {
-            $aula = $result->fetch_assoc();
-        } else {
-            die("Aula no encontrada.");
-        }
-    } else {
-        die("ID del aula no especificado.");
-    }
-    ?>
-
     <main class="content">
         <h1>Modificar Aula</h1>
 
@@ -41,15 +53,21 @@
 
             <div class="form-group">
                 <label for="numero_aula">Número de Aula:</label>
-                <input type="number" id="numero_aula" name="numero_aula" value="<?php echo htmlspecialchars($aula['numero_aula']); ?>" required>
+                <input type="number" id="numero_aula" name="numero_aula" 
+                       value="<?php echo htmlspecialchars($aula['numero_aula']); ?>" 
+                       min="1" max="999" required 
+                       title="Ingrese un número entre 1 y 999">
 
                 <label for="capacidad">Capacidad:</label>
-                <input type="number" id="capacidad" name="capacidad" value="<?php echo htmlspecialchars($aula['capacidad']); ?>" required>
+                <input type="number" id="capacidad" name="capacidad" 
+                       value="<?php echo htmlspecialchars($aula['capacidad']); ?>" 
+                       min="1" max="300" required
+                       title="Ingrese un número entre 1 y 300">
             </div>
 
             <!-- Botones -->
             <button type="submit">Guardar Cambios</button>
-            <button type="button" onclick="history.back()">Volver</button>
+            <button type="button" onclick="window.location.href='ListadoAulas.php'">Volver</button>
         </form>
 
     </main>

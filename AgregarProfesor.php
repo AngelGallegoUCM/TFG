@@ -1,3 +1,11 @@
+<?php
+// Iniciar sesión y verificar autenticación
+require_once("php/verificar_sesion.php");
+verificarSesion();
+
+// Verificar si el usuario tiene permisos (admin o editor)
+verificarRol(['admin', 'editor']);
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -16,22 +24,26 @@
         // Conexión a la base de datos
         include("php/conexion.php");
 
-        // Consulta para obtener los departamentos
-        $query_departamentos = "SELECT id, nombre_departamento FROM departamento";
-        $result_departamentos = $conn->query($query_departamentos);
+        // Consulta preparada para obtener los departamentos
+        $query_departamentos = "SELECT id, nombre_departamento FROM departamento ORDER BY nombre_departamento";
+        $stmt = $conn->prepare($query_departamentos);
+        $stmt->execute();
+        $result_departamentos = $stmt->get_result();
         ?>
 
-        <!-- Formulario para añadir profesor -->
+        <!-- Formulario para añadir profesor con validación -->
         <form action="php/InsertarProfesor.php" method="POST" class="form-container">
             <div class="form-group">
                 <label for="nombre">Nombre:</label>
-                <input type="text" id="nombre" name="nombre" required>
+                <input type="text" id="nombre" name="nombre" maxlength="100" required 
+                       pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s]+" title="Solo se permiten letras y espacios">
 
                 <label for="apellidos">Apellidos:</label>
-                <input type="text" id="apellidos" name="apellidos" required>
+                <input type="text" id="apellidos" name="apellidos" maxlength="150" required
+                       pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s]+" title="Solo se permiten letras y espacios">
 
                 <label for="correoPropio">Correo Propio:</label>
-                <input type="email" id="correoPropio" name="correoPropio" required>
+                <input type="email" id="correoPropio" name="correoPropio" maxlength="255" required>
 
                 <!-- Selector de Departamento -->
                 <label for="departamento">Departamento:</label>

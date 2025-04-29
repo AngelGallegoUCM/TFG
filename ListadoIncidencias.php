@@ -1,3 +1,8 @@
+<?php
+// Iniciar sesión y verificar autenticación
+require_once("php/verificar_sesion.php");
+verificarSesion();
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,6 +10,169 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Listado de Incidencias</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        #popup, #descripcion-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .popup-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            width: 400px;
+        }
+        
+        .popup-content h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .popup-content textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .popup-content button {
+            padding: 8px 15px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .popup-content button[type="submit"] {
+            background-color: #4e73df;
+            color: white;
+        }
+        
+        .popup-content button[type="button"] {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        
+        .incidencias-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .incidencias-table th {
+            background-color: #4e73df;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .incidencias-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .incidencias-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .action-buttons a, .action-buttons button {
+            padding: 5px 10px;
+            text-decoration: none;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            color: white;
+        }
+        
+        .justify-btn {
+            background-color: #28a745;
+        }
+        
+        .email-btn {
+            background-color: #17a2b8;
+        }
+        
+        .view-btn {
+            background-color: #6c757d;
+        }
+        
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        
+        .filter-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fc;
+            border-radius: 5px;
+        }
+        
+        .filter-form label {
+            margin-right: 5px;
+        }
+        
+        .filter-form input, .filter-form select {
+            padding: 6px 10px;
+            border: 1px solid #d1d3e2;
+            border-radius: 4px;
+        }
+        
+        .filter-form button {
+            padding: 6px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .filter-form button[type="submit"] {
+            background-color: #4e73df;
+            color: white;
+        }
+        
+        .filter-form button[type="button"] {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .success-message {
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+            border-radius: 4px;
+            transition: opacity 0.5s ease-in-out;
+        }
+    </style>
     <script>
         function mostrarPopup(id) {
             const popup = document.getElementById('popup');
@@ -15,33 +183,49 @@
 
         function cerrarPopup() {
             document.getElementById('popup').style.display = 'none';
+            document.getElementById('justificacion').value = '';
         }
-    </script>
-    <style>
-  
-  #popup {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-}
+        
+        function mostrarDescripcion(id, descripcion) {
+            const popup = document.getElementById('descripcion-popup');
+            const descripcionText = document.getElementById('descripcion-text');
+            descripcionText.innerText = descripcion || 'No hay descripción disponible';
+            popup.style.display = 'block';
+        }
 
-.popup-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 20px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
-    width: 400px; /* Ajusta el ancho según sea necesario */
-}
-    </style>
+        function cerrarDescripcionPopup() {
+            document.getElementById('descripcion-popup').style.display = 'none';
+        }
+        
+        // Función para mostrar mensajes temporales
+        window.onload = function() {
+            const msgSuccess = document.getElementById('msg-success');
+            if (msgSuccess) {
+                setTimeout(function() {
+                    msgSuccess.style.opacity = '0';
+                    setTimeout(function() {
+                        msgSuccess.style.display = 'none';
+                    }, 500);
+                }, 3000);
+            }
+            
+            // Validar fechas del formulario
+            document.getElementById('filter-form').addEventListener('submit', function(e) {
+                const inicio = document.getElementById('inicio').value;
+                const fin = document.getElementById('fin').value;
+                
+                if (inicio && fin) {
+                    if (new Date(inicio) > new Date(fin)) {
+                        alert('La fecha de inicio debe ser anterior a la fecha de fin');
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+        };
+    </script>
 </head>
 <body>
     <?php include("php/sidebar.php"); ?> <!-- Incluir el sidebar -->
@@ -49,14 +233,27 @@
     <div class="main-content">
         <h1>Listado de Incidencias</h1>
         <p>Informe > Incidencias</p>
+        
+        <?php if (isset($_GET['success'])): ?>
+        <div id="msg-success" class="success-message">
+            <?php 
+            $mensaje = "Operación realizada con éxito.";
+            if ($_GET['success'] == '1') $mensaje = "Incidencia eliminada correctamente.";
+            if ($_GET['success'] == '2') $mensaje = "Incidencia justificada correctamente.";
+            echo htmlspecialchars($mensaje);
+            ?>
+        </div>
+        <?php endif; ?>
 
-        <!-- Filtro de búsqueda -->
-        <form method="GET" action="" style="display: flex; gap: 10px; align-items: center;">
+        <!-- Filtro de búsqueda mejorado -->
+        <form id="filter-form" method="GET" action="" class="filter-form">
             <label for="inicio">Fecha de inicio:</label>
-            <input type="date" id="inicio" name="inicio" value="<?php echo isset($_GET['inicio']) ? htmlspecialchars($_GET['inicio']) : ''; ?>">
+            <input type="date" id="inicio" name="inicio" 
+                   value="<?php echo isset($_GET['inicio']) ? htmlspecialchars($_GET['inicio']) : ''; ?>">
 
             <label for="fin">Fecha de fin:</label>
-            <input type="date" id="fin" name="fin" value="<?php echo isset($_GET['fin']) ? htmlspecialchars($_GET['fin']) : ''; ?>">
+            <input type="date" id="fin" name="fin" 
+                   value="<?php echo isset($_GET['fin']) ? htmlspecialchars($_GET['fin']) : ''; ?>">
 
             <label for="justificada">Estado:</label>
             <select id="justificada" name="justificada">
@@ -66,106 +263,120 @@
             </select>
 
             <button type="submit">Filtrar</button>
-            <button type="button" onclick="window.location.href='ListaIncidencias.php'">Restablecer Filtro</button>
+            <button type="button" onclick="window.location.href='ListadoIncidencias.php'">Restablecer Filtro</button>
         </form>
 
-      <!-- Tabla de Incidencias -->
-        <table border="1">
-            <thead>
-                <tr>
-                    <th>Justificado</th>
-                    <th>Día de Incidencia</th>
-                    <th>Asignatura</th>
-                    <th>Profesor</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                include("php/conexion.php");
+        <!-- Tabla de Incidencias -->
+        <div class="table-container">
+            <table class="incidencias-table">
+                <thead>
+                    <tr>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th>Asignatura</th>
+                        <th>Profesor</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    include("php/conexion.php");
 
-                $conditions = [];
+                    // Preparar los parámetros y condiciones para la consulta
+                    $conditions = [];
+                    $params = [];
+                    $types = "";
 
-                if (!empty($_GET['inicio']) && !empty($_GET['fin'])) {
-                    $inicio = $conn->real_escape_string($_GET['inicio']);
-                    $fin = $conn->real_escape_string($_GET['fin']);
-                    $conditions[] = "i.fecha_incidencia BETWEEN '$inicio' AND '$fin'";
-                }
-
-                if (isset($_GET['justificada']) && ($_GET['justificada'] === "0" || $_GET['justificada'] === "1")) {
-                    $justificada = intval($_GET['justificada']);
-                    $conditions[] = "i.justificada = $justificada";
-                }
-
-                $where = count($conditions) > 0 ? "WHERE " . implode(" AND ", $conditions) : "";
-
-                $query = "
-                    SELECT i.id, DATE_FORMAT(i.fecha_incidencia, '%d/%m/%y') AS fecha_incidencia, a.nombre_asignatura, 
-                        CONCAT(p.nombre, ' ', p.apellidos) AS profesor, p.CorreoPropio AS correo_profesor, 
-                        i.justificada, i.descripcion
-                    FROM incidencias i
-                    JOIN asistencias s ON i.asistencia_id = s.id
-                    JOIN asignaturas a ON s.asignatura_id = a.id
-                    JOIN profesores p ON a.profesor_id = p.id
-                    $where
-                    ORDER BY i.fecha_incidencia DESC";
-
-                $result = $conn->query($query);
-
-                if ($result && $result->num_rows > 0) {
-                    while ($row = $result->fetch_assoc()) {
-                        echo "<tr>";
-                        echo "<td>" . ($row['justificada'] ? '✔️' : '❌') . "</td>";
-                        echo "<td>" . htmlspecialchars($row['fecha_incidencia']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['nombre_asignatura']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['profesor']) . "</td>";
-                        echo "<td>";
-                        if (!$row['justificada']) {
-                            echo "<button class='justify-btn' onclick='mostrarPopup(" . htmlspecialchars($row['id']) . ")'>Justificar</button> | ";
-                            echo "<a href='php/EnviarCorreo.php?id=" . htmlspecialchars($row['id']) . "&correo_profesor=" . urlencode($row['correo_profesor']) . "' class='email-btn'>Enviar Correo</a> | ";
-                        } else {
-                            echo "<button class='email-btn' onclick='mostrarDescripcion(" . htmlspecialchars($row['id']) . ", \"" . htmlspecialchars($row['descripcion']) . "\")'>Ver Descripción</button> | ";
-                        }
-                        echo "<a href='php/EliminarIncidencia.php?id=" . htmlspecialchars($row['id']) . "' class='delete-btn' onclick='return confirm(\"¿Seguro que quieres eliminar esta incidencia?\")'>Eliminar</a>";
-                        echo "</td>";
-                        echo "</tr>";
+                    if (!empty($_GET['inicio']) && !empty($_GET['fin'])) {
+                        $inicio = $_GET['inicio'];
+                        $fin = $_GET['fin'];
+                        $conditions[] = "DATE(i.fecha_incidencia) BETWEEN ? AND ?";
+                        $params[] = $inicio;
+                        $params[] = $fin;
+                        $types .= "ss";
                     }
-                } else {
-                    echo "<tr><td colspan='5'>No se encontraron incidencias.</td></tr>";
-                }
 
-                $conn->close();
-                ?>
-            </tbody>
-        </table>
+                    if (isset($_GET['justificada']) && ($_GET['justificada'] === "0" || $_GET['justificada'] === "1")) {
+                        $justificada = $_GET['justificada'];
+                        $conditions[] = "i.justificada = ?";
+                        $params[] = $justificada;
+                        $types .= "i";
+                    }
+
+                    $where = count($conditions) > 0 ? "WHERE " . implode(" AND ", $conditions) : "";
+
+                    $query = "
+                        SELECT i.id, DATE_FORMAT(i.fecha_incidencia, '%d/%m/%Y') AS fecha_formateada, 
+                               i.fecha_incidencia, a.nombre_asignatura, 
+                               CONCAT(p.nombre, ' ', p.apellidos) AS profesor, p.CorreoPropio AS correo_profesor, 
+                               i.justificada, i.descripcion
+                        FROM incidencias i
+                        JOIN asistencias s ON i.asistencia_id = s.id
+                        JOIN asignaturas a ON s.asignatura_id = a.id
+                        JOIN profesores p ON a.profesor_id = p.id
+                        $where
+                        ORDER BY i.fecha_incidencia DESC";
+
+                    // Preparar y ejecutar la consulta
+                    $stmt = $conn->prepare($query);
+                    if (!empty($params)) {
+                        $stmt->bind_param($types, ...$params);
+                    }
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+
+                    if ($result && $result->num_rows > 0) {
+                        while ($row = $result->fetch_assoc()) {
+                            echo "<tr>";
+                            echo "<td>" . ($row['justificada'] ? '<span style="color:green;">✓ Justificada</span>' : '<span style="color:red;">✗ No justificada</span>') . "</td>";
+                            echo "<td>" . htmlspecialchars($row['fecha_formateada']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['nombre_asignatura']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['profesor']) . "</td>";
+                            echo "<td class='action-buttons'>";
+                            
+                            // Diferentes acciones según el estado de la incidencia
+                            if (!$row['justificada']) {
+                                // Para incidencias no justificadas y si el usuario tiene permisos
+                                if (in_array($_SESSION['rol'], ['admin', 'editor'])) {
+                                    echo "<button class='justify-btn' onclick='mostrarPopup(" . htmlspecialchars($row['id']) . ")'>Justificar</button>";
+                                    echo "<a href='php/EnviarCorreo.php?id=" . htmlspecialchars($row['id']) . "&correo_profesor=" . urlencode($row['correo_profesor']) . "' class='email-btn'>Enviar Email</a>";
+                                }
+                            } else {
+                                // Para incidencias justificadas
+                                echo "<button class='view-btn' onclick='mostrarDescripcion(" . htmlspecialchars($row['id']) . ", \"" . htmlspecialchars(addslashes($row['descripcion'])) . "\")'>Ver Justificación</button>";
+                            }
+                            
+                            // Solo admin puede eliminar
+                            if ($_SESSION['rol'] === 'admin') {
+                                echo "<a href='php/EliminarIncidencia.php?id=" . htmlspecialchars($row['id']) . "' class='delete-btn' onclick='return confirm(\"¿Seguro que deseas eliminar esta incidencia?\")'>Eliminar</a>";
+                            }
+                            
+                            echo "</td>";
+                            echo "</tr>";
+                        }
+                    } else {
+                        echo "<tr><td colspan='5'>No se encontraron incidencias que coincidan con los criterios de búsqueda.</td></tr>";
+                    }
+
+                    $conn->close();
+                    ?>
+                </tbody>
+            </table>
+        </div>
 
         <!-- Popup de Descripción -->
-        <div id="descripcion-popup" class="popup-overlay" style="display: none;">
-            <div style="background: white; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); border-radius: 10px; z-index: 1000;">
-                <h3>Descripción de la Incidencia</h3>
-                <p id="descripcion-text"></p>
+        <div id="descripcion-popup">
+            <div class="popup-content">
+                <h3>Justificación de la Incidencia</h3>
+                <p id="descripcion-text" style="white-space: pre-wrap;"></p>
                 <button type="button" onclick="cerrarDescripcionPopup()">Cerrar</button>
             </div>
         </div>
 
-        <script>
-            function mostrarDescripcion(id, descripcion) {
-                const popup = document.getElementById('descripcion-popup');
-                const descripcionText = document.getElementById('descripcion-text');
-                descripcionText.innerText = descripcion;
-                popup.style.display = 'block';
-            }
-
-            function cerrarDescripcionPopup() {
-                document.getElementById('descripcion-popup').style.display = 'none';
-            }
-        </script>
-
-
         <!-- Popup de Justificación -->
-        <div id="popup" class="popup-overlay" style="display: none;">
+        <div id="popup">
             <div class="popup-content">
-                <form action="php/JustificarIncidencia.php" method="POST">
+                <form action="php/JustificarIncidencia.php" method="POST" onsubmit="return validarFormulario()">
                     <h3>Justificar Incidencia</h3>
                     <input type="hidden" id="incidencia_id" name="id">
                     <label for="justificacion">Motivo de la justificación:</label>
@@ -174,8 +385,19 @@
                     <button type="button" onclick="cerrarPopup()">Cancelar</button>
                 </form>
             </div>
-</div>
-
+        </div>
     </div>
+    
+    <script>
+        // Validar el formulario de justificación
+        function validarFormulario() {
+            const justificacion = document.getElementById('justificacion').value.trim();
+            if (justificacion === '') {
+                alert('Debe ingresar un motivo para la justificación');
+                return false;
+            }
+            return true;
+        }
+    </script>
 </body>
 </html>

@@ -1,29 +1,89 @@
 <?php
+// Iniciar sesión y verificar autenticación
+require_once("verificar_sesion.php");
+verificarSesion();
+
+// Verificar si el usuario tiene permisos (admin o editor)
+verificarRol(['admin', 'editor']);
+
 // Conexión a la base de datos
 include("conexion.php");
 
 // Verificar si se enviaron los datos del formulario
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $id = intval($_POST['id']);
-    $nombre = $conn->real_escape_string($_POST['nombre']);
-    $apellidos = $conn->real_escape_string($_POST['apellidos']);
-    $correoPropio = $conn->real_escape_string($_POST['correoPropio']);
-    $departamento_id = intval($_POST['departamento_id']);
-
-    // Actualizar los datos del profesor en la base de datos
-    $query = "
-        UPDATE profesores 
-        SET nombre = '$nombre', 
-            apellidos = '$apellidos', 
-            correoPropio = '$correoPropio', 
-            departamento_id = $departamento_id 
-        WHERE id = $id";
-
-    if ($conn->query($query) === TRUE) {
-        header("Location: ../ListadoProfesores.php"); // Redirigir al listado tras éxito
+    // Validación de entradas
+    $errores = [];
+    
+    // Validar ID
+    if (empty($_POST['id']) || !is_numeric($_POST['id'])) {
+        $errores[] = "ID de profesor inválido.";
+    }
+    
+    // Validar nombre
+    if (empty($_POST['nombre']) || !preg_match('/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/', $_POST['nombre'])) {
+        $errores[] = "El nombre solo debe contener letras y espacios.";
+    }
+    
+    // Validar apellidos
+    if (empty($_POST['apellidos']) || !preg_match('/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/', $_POST['apellidos'])) {
+        $errores[] = "Los apellidos solo deben contener letras y espacios.";
+    }
+    
+    // Validar correo
+    if (empty($_POST['correoPropio']) || !filter_var($_POST['correoPropio'], FILTER_VALIDATE_EMAIL)) {
+        $errores[] = "Debe proporcionar un correo electrónico válido.";
+    }
+    
+    // Validar departamento
+    if (empty($_POST['departamento_id']) || !is_numeric($_POST['departamento_id'])) {
+        $errores[] = "Debe seleccionar un departamento válido.";
+    }
+    
+    // Si hay errores, mostrarlos y no procesar
+    if (!empty($errores)) {
+        echo "<div class='error-message'>";
+        echo "<h3>Se encontraron errores:</h3>";
+        echo "<ul>";
+        foreach ($errores as $error) {
+            echo "<li>" . htmlspecialchars($error) . "</li>";
+        }
+        echo "</ul>";
+        echo "<p><a href='javascript:history.back()'>Volver al formulario</a></p>";
+        echo "</div>";
         exit();
-    } else {
-        echo "Error al actualizar el profesor: " . $conn->error;
+    }
+    
+    // Si no hay errores, continuar con la actualización usando consulta preparada
+    try {
+        // Obtener valores sanitizados
+        $id = intval($_POST['id']);
+        $nombre = $_POST['nombre'];
+        $apellidos = $_POST['apellidos'];
+        $correoPropio = $_POST['correoPropio'];
+        $departamento_id = intval($_POST['departamento_id']);
+        
+        // Preparar la consulta
+        $stmt = $conn->prepare("
+            UPDATE profesores 
+            SET nombre = ?, 
+                apellidos = ?, 
+                correoPropio = ?, 
+                departamento_id = ? 
+            WHERE id = ?");
+        
+        // Vincular parámetros
+        $stmt->bind_param("sssii", $nombre, $apellidos, $correoPropio, $departamento_id, $id);
+        
+        // Ejecutar la consulta
+        if ($stmt->execute()) {
+            // Redirigir al listado tras éxito
+            header("Location: ../ListadoProfesores.php?success=2");
+            exit();
+        } else {
+            throw new Exception("Error al ejecutar la consulta: " . $stmt->error);
+        }
+    } catch (Exception $e) {
+        echo "Error al actualizar el profesor: " . htmlspecialchars($e->getMessage());
     }
 }
 ?>

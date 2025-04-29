@@ -117,3 +117,23 @@ button:hover {
 .volver {
     margin-top: 20px; /* Separación superior para el botón "Volver" */
 }
+
+  /* Botones de acción */
+  .view-btn, .edit-btn, .delete-btn {
+    background-color: #007bff; /* Azul para los botones */
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    margin: 0 5px; /* Espaciado entre botones */
+    border-radius: 5px; /* Bordes redondeados */
+    cursor: pointer;
+  }
+  
+  .edit-btn {
+    background-color: #ffc107; /* Amarillo para "Modificar" */
+  }
+  
+  
+  .delete-btn {
+    background-color: #dc3545; /* Rojo para "Eliminar" */
+  }
