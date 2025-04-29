@@ -124,7 +124,7 @@
                             echo "<button class='justify-btn' onclick='mostrarPopup(" . htmlspecialchars($row['id']) . ")'>Justificar</button> | ";
                             echo "<a href='php/EnviarCorreo.php?id=" . htmlspecialchars($row['id']) . "&correo_profesor=" . urlencode($row['correo_profesor']) . "' class='email-btn'>Enviar Correo</a> | ";
                         } else {
-                            echo "<button class='view-description-btn' onclick='mostrarDescripcion(" . htmlspecialchars($row['id']) . ", \"" . htmlspecialchars($row['descripcion']) . "\")'>Ver Descripción</button> | ";
+                            echo "<button class='email-btn' onclick='mostrarDescripcion(" . htmlspecialchars($row['id']) . ", \"" . htmlspecialchars($row['descripcion']) . "\")'>Ver Descripción</button> | ";
                         }
                         echo "<a href='php/EliminarIncidencia.php?id=" . htmlspecialchars($row['id']) . "' class='delete-btn' onclick='return confirm(\"¿Seguro que quieres eliminar esta incidencia?\")'>Eliminar</a>";
                         echo "</td>";

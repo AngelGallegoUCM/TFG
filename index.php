@@ -18,21 +18,6 @@
           <p>Selecciona uno de los módulos de GAP</p>
         </header>
 
-        <!-- Módulos -->
-        <section class="modules">
-            <div class="module">
-              <img src="img/list.svg" alt="Listar Profesores" href="ListadoProfesores.html"/>
-              <p>Listar Profesores</p>
-            </div>
-            <div class="module">
-              <img src="img/view.svg" alt="Listar Aulas" />
-              <p>Listar Aulas</p>
-            </div>
-            <div class="module">
-              <img src="img/edit.svg" alt="Listar Asignatura" />
-              <p>Listar Asignatura</p>
-            </div>
-          </section>
       </main>
     </div>
   </body>
