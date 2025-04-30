@@ -92,7 +92,7 @@ verificarSesion();
             
             <!-- Módulo de configuración (solo admin) -->
             <?php if ($_SESSION['rol'] === 'admin'): ?>
-            <a href="ConfiguracionCorreo.php" class="module-card admin-module">
+            <a href="GestionUsuarios.php" class="module-card admin-module">
               <div class="module-icon">⚙️</div>
               <h4>Configuración</h4>
               <p>Ajustes del sistema</p>
