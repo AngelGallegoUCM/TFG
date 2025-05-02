@@ -3,8 +3,8 @@
 require_once("php/verificar_sesion.php");
 verificarSesion();
 
-// Verificar si el usuario tiene permisos (admin o editor)
-verificarRol(['admin', 'editor']);
+// Verificar si el usuario tiene permisos (solo admin)
+verificarRol(['admin']);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -41,6 +41,11 @@ verificarRol(['admin', 'editor']);
                 <label for="apellidos">Apellidos:</label>
                 <input type="text" id="apellidos" name="apellidos" maxlength="150" required
                        pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s]+" title="Solo se permiten letras y espacios">
+                
+                <label for="identificador">Identificador (único):</label>
+                <input type="text" id="identificador" name="identificador" maxlength="50" required
+                       pattern="[A-Za-z0-9\-_]+" title="Solo se permiten letras, números, guiones y guiones bajos">
+                <small style="display: block; margin-top: 5px; color: #6c757d;">Este identificador debe ser único para cada profesor.</small>
 
                 <label for="correoPropio">Correo Propio:</label>
                 <input type="email" id="correoPropio" name="correoPropio" maxlength="255" required>

@@ -40,10 +40,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             header("Location: index.php");
             exit();
         } else {
-            $error = "Contraseña incorrecta";
+            $error = "Usuario o contraseña incorrecta";
         }
     } else {
-        $error = "Usuario no encontrado";
+        $error = "Usuario o contraseña incorrecta";
     }
     
     $stmt->close();

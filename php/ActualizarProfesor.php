@@ -29,6 +29,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $errores[] = "Los apellidos solo deben contener letras y espacios.";
     }
     
+    // Validar identificador (solo para admin)
+    if (isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin') {
+        if (empty($_POST['identificador']) || !preg_match('/^[A-Za-z0-9\-_]+$/', $_POST['identificador'])) {
+            $errores[] = "El identificador solo debe contener letras, números, guiones y guiones bajos.";
+        } else {
+            // Verificar que el identificador no exista ya en la base de datos (excepto para el mismo profesor)
+            $stmt_check = $conn->prepare("SELECT COUNT(*) as total FROM profesores WHERE identificador = ? AND id != ?");
+            $stmt_check->bind_param("si", $_POST['identificador'], $_POST['id']);
+            $stmt_check->execute();
+            $result_check = $stmt_check->get_result();
+            $row = $result_check->fetch_assoc();
+            
+            if ($row['total'] > 0) {
+                $errores[] = "El identificador ya está en uso por otro profesor. Por favor, elija otro.";
+            }
+        }
+    }
+    
     // Validar correo
     if (empty($_POST['correoPropio']) || !filter_var($_POST['correoPropio'], FILTER_VALIDATE_EMAIL)) {
         $errores[] = "Debe proporcionar un correo electrónico válido.";
@@ -59,6 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $id = intval($_POST['id']);
         $nombre = $_POST['nombre'];
         $apellidos = $_POST['apellidos'];
+        $identificador = $_POST['identificador'];
         $correoPropio = $_POST['correoPropio'];
         $departamento_id = intval($_POST['departamento_id']);
         
@@ -67,12 +86,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             UPDATE profesores 
             SET nombre = ?, 
                 apellidos = ?, 
+                identificador = ?,
                 correoPropio = ?, 
                 departamento_id = ? 
             WHERE id = ?");
         
         // Vincular parámetros
-        $stmt->bind_param("sssii", $nombre, $apellidos, $correoPropio, $departamento_id, $id);
+        $stmt->bind_param("ssssii", $nombre, $apellidos, $identificador, $correoPropio, $departamento_id, $id);
         
         // Ejecutar la consulta
         if ($stmt->execute()) {

@@ -172,6 +172,38 @@ verificarSesion();
             border-radius: 4px;
             transition: opacity 0.5s ease-in-out;
         }
+        
+        /* Estilos para paginación */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            gap: 5px;
+        }
+        
+        .pagination a, .pagination span {
+            display: inline-block;
+            padding: 8px 12px;
+            text-decoration: none;
+            border: 1px solid #ddd;
+            color: #4e73df;
+            border-radius: 4px;
+        }
+        
+        .pagination a:hover {
+            background-color: #f8f9fc;
+        }
+        
+        .pagination .active {
+            background-color: #4e73df;
+            color: white;
+            border-color: #4e73df;
+        }
+        
+        .pagination .disabled {
+            color: #aaa;
+            cursor: not-allowed;
+        }
     </style>
     <script>
         function mostrarPopup(id) {
@@ -275,12 +307,18 @@ verificarSesion();
                         <th>Fecha</th>
                         <th>Asignatura</th>
                         <th>Profesor</th>
+                        <th>Correo del Profesor</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php
                     include("php/conexion.php");
+
+                    // Configuración de paginación
+                    $registros_por_pagina = 12;
+                    $pagina_actual = isset($_GET['pagina']) ? intval($_GET['pagina']) : 1;
+                    $offset = ($pagina_actual - 1) * $registros_por_pagina;
 
                     // Preparar los parámetros y condiciones para la consulta
                     $conditions = [];
@@ -305,6 +343,26 @@ verificarSesion();
 
                     $where = count($conditions) > 0 ? "WHERE " . implode(" AND ", $conditions) : "";
 
+                    // Consulta para obtener el total de registros
+                    $query_count = "
+                        SELECT COUNT(*) as total
+                        FROM incidencias i
+                        JOIN asistencias s ON i.asistencia_id = s.id
+                        JOIN asignaturas a ON s.asignatura_id = a.id
+                        JOIN profesores p ON a.profesor_id = p.id
+                        $where";
+
+                    $stmt_count = $conn->prepare($query_count);
+                    if (!empty($params)) {
+                        $stmt_count->bind_param($types, ...$params);
+                    }
+                    $stmt_count->execute();
+                    $result_count = $stmt_count->get_result();
+                    $row_count = $result_count->fetch_assoc();
+                    $total_registros = $row_count['total'];
+                    $total_paginas = ceil($total_registros / $registros_por_pagina);
+
+                    // Consulta principal con límite para paginación
                     $query = "
                         SELECT i.id, DATE_FORMAT(i.fecha_incidencia, '%d/%m/%Y') AS fecha_formateada, 
                                i.fecha_incidencia, a.nombre_asignatura, 
@@ -315,7 +373,12 @@ verificarSesion();
                         JOIN asignaturas a ON s.asignatura_id = a.id
                         JOIN profesores p ON a.profesor_id = p.id
                         $where
-                        ORDER BY i.fecha_incidencia DESC";
+                        ORDER BY i.fecha_incidencia DESC
+                        LIMIT ? OFFSET ?";
+
+                    $params[] = $registros_por_pagina;
+                    $params[] = $offset;
+                    $types .= "ii";
 
                     // Preparar y ejecutar la consulta
                     $stmt = $conn->prepare($query);
@@ -332,6 +395,7 @@ verificarSesion();
                             echo "<td>" . htmlspecialchars($row['fecha_formateada']) . "</td>";
                             echo "<td>" . htmlspecialchars($row['nombre_asignatura']) . "</td>";
                             echo "<td>" . htmlspecialchars($row['profesor']) . "</td>";
+                            echo "<td>" . htmlspecialchars($row['correo_profesor']) . "</td>";
                             echo "<td class='action-buttons'>";
                             
                             // Diferentes acciones según el estado de la incidencia
@@ -339,7 +403,6 @@ verificarSesion();
                                 // Para incidencias no justificadas y si el usuario tiene permisos
                                 if (in_array($_SESSION['rol'], ['admin', 'editor'])) {
                                     echo "<button class='justify-btn' onclick='mostrarPopup(" . htmlspecialchars($row['id']) . ")'>Justificar</button>";
-                                    echo "<a href='php/EnviarCorreo.php?id=" . htmlspecialchars($row['id']) . "&correo_profesor=" . urlencode($row['correo_profesor']) . "' class='email-btn'>Enviar Email</a>";
                                 }
                             } else {
                                 // Para incidencias justificadas
@@ -355,14 +418,68 @@ verificarSesion();
                             echo "</tr>";
                         }
                     } else {
-                        echo "<tr><td colspan='5'>No se encontraron incidencias que coincidan con los criterios de búsqueda.</td></tr>";
+                        echo "<tr><td colspan='6'>No se encontraron incidencias que coincidan con los criterios de búsqueda.</td></tr>";
                     }
-
-                    $conn->close();
                     ?>
                 </tbody>
             </table>
         </div>
+
+        <!-- Paginación -->
+        <?php if ($total_registros > 0): ?>
+        <div class="pagination">
+            <?php
+            // Construir la URL base para los enlaces de paginación, manteniendo los parámetros de búsqueda
+            $url_params = [];
+            if (isset($_GET['inicio']) && !empty($_GET['inicio'])) {
+                $url_params[] = "inicio=" . urlencode($_GET['inicio']);
+            }
+            if (isset($_GET['fin']) && !empty($_GET['fin'])) {
+                $url_params[] = "fin=" . urlencode($_GET['fin']);
+            }
+            if (isset($_GET['justificada']) && ($_GET['justificada'] === "0" || $_GET['justificada'] === "1")) {
+                $url_params[] = "justificada=" . urlencode($_GET['justificada']);
+            }
+            
+            $url_base = "ListadoIncidencias.php?" . implode("&", $url_params);
+            
+            // Agregar separador si ya hay parámetros
+            $url_base .= !empty($url_params) ? "&" : "";
+            
+            // Enlace a la primera página
+            if ($pagina_actual > 1) {
+                echo "<a href='{$url_base}pagina=1'>&laquo; Primera</a>";
+                echo "<a href='{$url_base}pagina=" . ($pagina_actual - 1) . "'>&lt; Anterior</a>";
+            } else {
+                echo "<span class='disabled'>&laquo; Primera</span>";
+                echo "<span class='disabled'>&lt; Anterior</span>";
+            }
+            
+            // Mostrar un rango de páginas
+            $rango = 2; // Número de páginas a mostrar a cada lado de la página actual
+            for ($i = max(1, $pagina_actual - $rango); $i <= min($total_paginas, $pagina_actual + $rango); $i++) {
+                if ($i == $pagina_actual) {
+                    echo "<span class='active'>{$i}</span>";
+                } else {
+                    echo "<a href='{$url_base}pagina={$i}'>{$i}</a>";
+                }
+            }
+            
+            // Enlace a la última página
+            if ($pagina_actual < $total_paginas) {
+                echo "<a href='{$url_base}pagina=" . ($pagina_actual + 1) . "'>Siguiente &gt;</a>";
+                echo "<a href='{$url_base}pagina={$total_paginas}'>Última &raquo;</a>";
+            } else {
+                echo "<span class='disabled'>Siguiente &gt;</span>";
+                echo "<span class='disabled'>Última &raquo;</span>";
+            }
+            ?>
+        </div>
+        <p style="text-align: center;">
+            Mostrando <?php echo min($registros_por_pagina, $result->num_rows); ?> de <?php echo $total_registros; ?> registros
+            (Página <?php echo $pagina_actual; ?> de <?php echo $total_paginas; ?>)
+        </p>
+        <?php endif; ?>
 
         <!-- Popup de Descripción -->
         <div id="descripcion-popup">

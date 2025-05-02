@@ -148,7 +148,7 @@ verificarSesion();
 
         // Consulta para obtener los datos del profesor y su departamento usando consulta preparada
         $query_profesor = "
-            SELECT p.nombre, p.apellidos, p.CorreoPropio, d.nombre_departamento, d.correo_departamento 
+            SELECT p.nombre, p.apellidos, p.identificador, p.CorreoPropio, d.nombre_departamento, d.correo_departamento 
             FROM profesores p
             LEFT JOIN departamento d ON p.departamento_id = d.id
             WHERE p.id = ?";
@@ -279,6 +279,13 @@ verificarSesion();
                         <label for="apellidos">Apellidos</label>
                         <input type="text" id="apellidos" value="<?php echo htmlspecialchars($profesor['apellidos']); ?>" readonly>
                     </div>
+
+                    <?php if (isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin'): ?>
+                    <div class="form-group">
+                        <label for="identificador">Identificador</label>
+                        <input type="text" id="identificador" value="<?php echo htmlspecialchars($profesor['identificador']); ?>" readonly>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="form-group">
                         <label for="correo">Correo Propio</label>

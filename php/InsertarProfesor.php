@@ -4,8 +4,8 @@
 require_once("verificar_sesion.php");
 verificarSesion();
 
-// Verificar si el usuario tiene permisos (admin o editor)
-verificarRol(['admin', 'editor']);
+// Verificar si el usuario tiene permisos (solo admin)
+verificarRol(['admin']);
 
 // Conexión a la base de datos
 include("conexion.php");
@@ -23,6 +23,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
      // Validar apellidos
      if (empty($_POST['apellidos']) || !preg_match('/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/', $_POST['apellidos'])) {
          $errores[] = "Los apellidos solo deben contener letras y espacios.";
+     }
+     
+     // Validar identificador
+     if (empty($_POST['identificador']) || !preg_match('/^[A-Za-z0-9\-_]+$/', $_POST['identificador'])) {
+         $errores[] = "El identificador solo debe contener letras, números, guiones y guiones bajos.";
+     } else {
+         // Verificar que el identificador no exista ya en la base de datos
+         $stmt_check = $conn->prepare("SELECT COUNT(*) as total FROM profesores WHERE identificador = ?");
+         $stmt_check->bind_param("s", $_POST['identificador']);
+         $stmt_check->execute();
+         $result_check = $stmt_check->get_result();
+         $row = $result_check->fetch_assoc();
+         
+         if ($row['total'] > 0) {
+             $errores[] = "El identificador ya está en uso. Por favor, elija otro.";
+         }
      }
      
      // Validar correo
@@ -52,14 +68,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
      // Si no hay errores, continuar con la inserción usando consulta preparada
      try {
          // Preparar la consulta
-         $stmt = $conn->prepare("INSERT INTO profesores (nombre, apellidos, correoPropio, departamento_id) VALUES (?, ?, ?, ?)");
+         $stmt = $conn->prepare("INSERT INTO profesores (nombre, apellidos, identificador, correoPropio, departamento_id) VALUES (?, ?, ?, ?, ?)");
          
          // Vincular parámetros
-         $stmt->bind_param("sssi", $nombre, $apellidos, $correoPropio, $departamento_id);
+         $stmt->bind_param("ssssi", $nombre, $apellidos, $identificador, $correoPropio, $departamento_id);
          
          // Asignar valores a los parámetros
          $nombre = $_POST['nombre'];
          $apellidos = $_POST['apellidos'];
+         $identificador = $_POST['identificador'];
          $correoPropio = $_POST['correoPropio'];
          $departamento_id = intval($_POST['departamento_id']);
          

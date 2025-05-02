@@ -5,34 +5,7 @@ verificarSesion();
 
 // Verificar si el usuario tiene permisos (admin o editor)
 verificarRol(['admin', 'editor']);
-
-// Conexión a la base de datos
-include("php/conexion.php");
-
-// Obtener el ID del profesor desde la URL y validarlo
-if (isset($_GET['id']) && !empty($_GET['id']) && is_numeric($_GET['id'])) {
-    $profesor_id = intval($_GET['id']);
-
-    try {
-        // Consulta preparada para obtener los datos del profesor
-        $stmt = $conn->prepare("SELECT id, nombre, apellidos, correoPropio, departamento_id FROM profesores WHERE id = ?");
-        $stmt->bind_param("i", $profesor_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows > 0) {
-            $profesor = $result->fetch_assoc();
-        } else {
-            die("Profesor no encontrado.");
-        }
-    } catch (Exception $e) {
-        die("Error al obtener datos del profesor: " . htmlspecialchars($e->getMessage()));
-    }
-} else {
-    die("ID del profesor no especificado o inválido.");
-}
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -47,52 +20,89 @@ if (isset($_GET['id']) && !empty($_GET['id']) && is_numeric($_GET['id'])) {
     <main class="content">
         <h1>Modificar Profesor</h1>
 
-        <!-- Formulario para modificar profesor -->
+        <?php
+        // Conexión a la base de datos
+        include("php/conexion.php");
+
+        // Validar y obtener el ID del profesor
+        if (isset($_GET['id']) && is_numeric($_GET['id'])) {
+            $profesor_id = intval($_GET['id']);
+
+            // Consulta para obtener los datos del profesor
+            $query_profesor = "SELECT id, nombre, apellidos, identificador, CorreoPropio, departamento_id FROM profesores WHERE id = ?";
+            $stmt = $conn->prepare($query_profesor);
+            $stmt->bind_param("i", $profesor_id);
+            $stmt->execute();
+            $result_profesor = $stmt->get_result();
+
+            if ($result_profesor->num_rows > 0) {
+                $profesor = $result_profesor->fetch_assoc();
+            } else {
+                die("Profesor no encontrado.");
+            }
+
+            // Consulta para obtener los departamentos
+            $query_departamentos = "SELECT id, nombre_departamento FROM departamento ORDER BY nombre_departamento";
+            $stmt = $conn->prepare($query_departamentos);
+            $stmt->execute();
+            $result_departamentos = $stmt->get_result();
+        } else {
+            die("ID del profesor no especificado o inválido.");
+        }
+        ?>
+
+        <!-- Formulario para modificar profesor con validación -->
         <form action="php/ActualizarProfesor.php" method="POST" class="form-container">
-            <!-- Campo oculto para enviar el ID del profesor -->
+            <!-- Campo oculto para el ID -->
             <input type="hidden" name="id" value="<?php echo htmlspecialchars($profesor['id']); ?>">
 
             <div class="form-group">
                 <label for="nombre">Nombre:</label>
-                <input type="text" id="nombre" name="nombre" 
-                       value="<?php echo htmlspecialchars($profesor['nombre']); ?>"
-                       pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s]+" 
-                       title="Solo se permiten letras y espacios"
-                       maxlength="100" required>
+                <input type="text" id="nombre" name="nombre" maxlength="100" required 
+                       pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s]+" title="Solo se permiten letras y espacios"
+                       value="<?php echo htmlspecialchars($profesor['nombre']); ?>">
 
                 <label for="apellidos">Apellidos:</label>
-                <input type="text" id="apellidos" name="apellidos" 
-                       value="<?php echo htmlspecialchars($profesor['apellidos']); ?>"
-                       pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s]+" 
-                       title="Solo se permiten letras y espacios"
-                       maxlength="150" required>
+                <input type="text" id="apellidos" name="apellidos" maxlength="150" required
+                       pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s]+" title="Solo se permiten letras y espacios"
+                       value="<?php echo htmlspecialchars($profesor['apellidos']); ?>">
+                
+                <?php if (isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin'): ?>
+                <label for="identificador">Identificador (único):</label>
+                <input type="text" id="identificador" name="identificador" maxlength="50" required
+                       pattern="[A-Za-z0-9\-_]+" title="Solo se permiten letras, números, guiones y guiones bajos"
+                       value="<?php echo htmlspecialchars($profesor['identificador']); ?>">
+                <small style="display: block; margin-top: 5px; color: #6c757d;">Este identificador debe ser único para cada profesor.</small>
+                <?php else: ?>
+                <input type="hidden" name="identificador" value="<?php echo htmlspecialchars($profesor['identificador']); ?>">
+                <?php endif; ?>
 
                 <label for="correoPropio">Correo Propio:</label>
-                <input type="email" id="correoPropio" name="correoPropio" 
-                       value="<?php echo htmlspecialchars($profesor['correoPropio']); ?>"
-                       maxlength="255" required>
+                <input type="email" id="correoPropio" name="correoPropio" maxlength="255" required
+                       value="<?php echo htmlspecialchars($profesor['CorreoPropio']); ?>">
 
                 <!-- Selector de Departamento -->
-                <?php
-                $query_departamentos = "SELECT id, nombre_departamento FROM departamento ORDER BY nombre_departamento";
-                $stmt_departamentos = $conn->prepare($query_departamentos);
-                $stmt_departamentos->execute();
-                $result_departamentos = $stmt_departamentos->get_result();
-                ?>
-                <label for="departamento_id">Departamento:</label>
-                <select id="departamento_id" name="departamento_id" required>
-                    <?php while ($departamento = $result_departamentos->fetch_assoc()) { ?>
-                        <option value="<?php echo htmlspecialchars($departamento['id']); ?>" 
-                                <?php if ($profesor['departamento_id'] == $departamento['id']) echo 'selected'; ?>>
-                            <?php echo htmlspecialchars($departamento['nombre_departamento']); ?>
-                        </option>
-                    <?php } ?>
+                <label for="departamento">Departamento:</label>
+                <select id="departamento" name="departamento_id" required>
+                    <?php
+                    if ($result_departamentos && $result_departamentos->num_rows > 0) {
+                        while ($departamento = $result_departamentos->fetch_assoc()) {
+                            $selected = ($departamento['id'] == $profesor['departamento_id']) ? 'selected' : '';
+                            echo "<option value='" . htmlspecialchars($departamento['id']) . "' " . $selected . ">" . 
+                                  htmlspecialchars($departamento['nombre_departamento']) . "</option>";
+                        }
+                    } else {
+                        echo "<option value=''>No hay departamentos disponibles</option>";
+                    }
+                    ?>
                 </select>
             </div>
 
-            <!-- Botones -->
+            <!-- Botón para enviar -->
             <button type="submit">Guardar Cambios</button>
-            <button type="button" onclick="history.back()">Volver</button>
+
+            <!-- Botón Volver -->
+            <button type="button" onclick="window.location.href='VerDatosProfesor.php?id=<?php echo $profesor_id; ?>'">Volver</button>
         </form>
 
     </main>
